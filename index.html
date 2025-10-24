@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare RCM Knowledge Assessment</title>
+    <!--
+    DYNAMIC QUIZ - Fetches questions from a Google Sheet CSV in real-time, 
+    allowing you to update quiz content by simply editing the spreadsheet 
+    without touching this HTML file.
+    -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .quiz-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+            position: relative;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #4a5568;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fff5f5;
+            border: 2px solid #f56565;
+            border-radius: 12px;
+            padding: 20px;
+            color: #742a2a;
+            text-align: center;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #718096;
+            font-size: 16px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .progress-text {
+            text-align: center;
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .question-card {
+            margin-bottom: 30px;
+        }
+        
+        .question-header {
+            display: flex;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+        
+        .question-number {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .question-text {
+            color: #2d3748;
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        
+        .options {
+            margin: 25px 0;
+        }
+        
+        .option {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .option:hover:not(.disabled) {
+            border-color: #667eea;
+            background: #edf2f7;
+            transform: translateX(4px);
+        }
+        
+        .option.selected {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+        
+        .option.correct {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+        
+        .option.incorrect {
+            border-color: #f56565;
+            background: #fff5f5;
+        }
+        
+        .option.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        .option-letter {
+            background: white;
+            border: 2px solid #cbd5e0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 15px;
+            flex-shrink: 0;
+            color: #4a5568;
+        }
+        
+        .option.correct .option-letter {
+            background: #48bb78;
+            border-color: #48bb78;
+            color: white;
+        }
+        
+        .option.incorrect .option-letter {
+            background: #f56565;
+            border-color: #f56565;
+            color: white;
+        }
+        
+        .option-text {
+            flex: 1;
+            color: #2d3748;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .feedback {
+            background: #edf2f7;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .feedback.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .feedback.correct {
+            background: #f0fff4;
+            border-left-color: #48bb78;
+        }
+        
+        .feedback.incorrect {
+            background: #fff5f5;
+            border-left-color: #f56565;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feedback-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .feedback-icon {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        .feedback.correct .feedback-header {
+            color: #22543d;
+        }
+        
+        .feedback.incorrect .feedback-header {
+            color: #742a2a;
+        }
+        
+        .feedback-content {
+            color: #2d3748;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+        
+        .feedback-resource {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            font-size: 14px;
+            color: #4a5568;
+        }
+        
+        .feedback-resource a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .feedback-resource a:hover {
+            text-decoration: underline;
+        }
+        
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-back {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-back:hover:not(:disabled) {
+            background: #cbd5e0;
+        }
+        
+        .btn-back:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .btn-next {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-next:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-next:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        
+        .results-container {
+            text-align: center;
+        }
+        
+        .results-score {
+            font-size: 64px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .results-message {
+            font-size: 24px;
+            color: #2d3748;
+            margin-bottom: 30px;
+        }
+        
+        .results-details {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .results-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .results-stat:last-child {
+            border-bottom: none;
+        }
+        
+        .results-stat-label {
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
+        .results-stat-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+        
+        .btn-restart {
+            background: #48bb78;
+            color: white;
+            margin-top: 20px;
+        }
+        
+        .btn-restart:hover {
+            background: #38a169;
+        }
+        
+        @media (max-width: 640px) {
+            .quiz-container {
+                padding: 24px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .question-text {
+                font-size: 18px;
+            }
+            
+            .option {
+                padding: 14px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container" id="app">
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Loading quiz questions...</p>
+        </div>
+    </div>
+
+    <script>
+        // ⚙️ CONFIGURATION - YOUR GOOGLE SHEET CSV URL
+        const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHdio_V6Rf0S4W-zxOtCEoCSlUSSQHfGDyyQtstYxMplyyVHB1bwbaKR1CFXCpc_BmDIFQ0HXEIubb/pub?output=csv';
+        
+        // Global state
+        let quizData = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+        let userAnswers = [];
+
+        // Parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const questions = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                // Simple CSV parsing (handles basic cases)
+                const values = parseCSVLine(lines[i]);
+                
+                if (values.length < headers.length) continue;
+                
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] ? values[index].trim() : '';
+                });
+                
+                // Convert to quiz format
+                const options = [
+                    row.option_a,
+                    row.option_b,
+                    row.option_c,
+                    row.option_d
+                ].filter(opt => opt && opt.length > 0);
+                
+                // Convert letter to index
+                const correctLetter = row.correct_answer.toUpperCase();
+                const correctIndex = correctLetter.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+                
+                questions.push({
+                    number: parseInt(row.question_number) || i,
+                    question: row.question_text,
+                    options: options,
+                    correct: correctIndex,
+                    points: parseInt(row.points) || 1,
+                    explainer: row.explainer || '',
+                    resource: row.resource_link || ''
+                });
+            }
+            
+            return questions;
+        }
+        
+        // Simple CSV line parser (handles quoted fields with commas)
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            
+            return result.map(val => val.replace(/^"|"$/g, ''));
+        }
+
+        // Load questions from Google Sheet
+        async function loadQuizData() {
+            const app = document.getElementById('app');
+            
+            try {
+                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load quiz data. Check that your Google Sheet is published and the URL is correct.');
+                }
+                
+                const csvText = await response.text();
+                quizData = parseCSV(csvText);
+                
+                if (quizData.length === 0) {
+                    throw new Error('No questions found in the spreadsheet. Make sure your sheet has data starting in row 2.');
+                }
+                
+                console.log(`✓ Loaded ${quizData.length} questions from Google Sheet`);
+                initQuiz();
+                
+            } catch (error) {
+                app.innerHTML = `
+                    <div class="error">
+                        <h2 style="margin-bottom: 15px;">⚠️ Error Loading Quiz</h2>
+                        <p style="margin-bottom: 10px;">${error.message}</p>
+                        <p style="font-size: 14px; margin-top: 20px;">
+                            <strong>Troubleshooting:</strong><br>
+                            1. Make sure your Google Sheet is shared "Anyone with the link"<br>
+                            2. Verify you're using the CSV export URL<br>
+                            3. Check browser console (F12) for more details
+                        </p>
+                    </div>
+                `;
+                console.error('Quiz load error:', error);
+            }
+        }
+
+        function initQuiz() {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="header">
+                    <h1>Healthcare RCM Knowledge Assessment</h1>
+                    <p>Technical Program Manager Certification - ${quizData.length} Questions</p>
+                </div>
+                
+                <div class="progress-text">
+                    <span id="progress-text">Question 1 of ${quizData.length}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                
+                <div id="quiz-content"></div>
+            `;
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const question = quizData[currentQuestion];
+            const content = document.getElementById('quiz-content');
+            
+            // Update progress
+            const progressPercent = ((currentQuestion) / quizData.length) * 100;
+            document.getElementById('progress-fill').style.width = progressPercent + '%';
+            document.getElementById('progress-text').textContent = `Question ${currentQuestion + 1} of ${quizData.length}`;
+            
+            // Check if this question was previously answered
+            const previousAnswer = userAnswers[currentQuestion];
+            
+            content.innerHTML = `
+                <div class="question-card">
+                    <div class="question-header">
+                        <div class="question-number">Q${question.number}</div>
+                        <div class="question-text">${question.question}</div>
+                    </div>
+                    
+                    <div class="options">
+                        ${question.options.map((option, index) => `
+                            <div class="option ${previousAnswer ? (previousAnswer.selected === index ? (previousAnswer.correct ? 'correct' : 'incorrect') : (index === question.correct ? 'correct' : '')) : ''} ${previousAnswer ? 'disabled' : ''}" onclick="selectAnswer(${index})">
+                                <div class="option-letter">${String.fromCharCode(65 + index)}</div>
+                                <div class="option-text">${option}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div id="feedback" class="feedback ${previousAnswer ? 'show' : ''} ${previousAnswer ? (previousAnswer.correct ? 'correct' : 'incorrect') : ''}">
+                        ${previousAnswer ? `
+                            <div class="feedback-header">
+                                <span class="feedback-icon">${previousAnswer.correct ? '✓' : '✗'}</span>
+                                <span>${previousAnswer.correct ? 'Correct!' : 'Incorrect'}</span>
+                            </div>
+                            <div class="feedback-content">
+                                ${question.explainer}
+                            </div>
+                            ${question.resource ? `
+                                <div class="feedback-resource">
+                                    📚 Learn more: ${question.resource.startsWith('http') ? 
+                                        `<a href="${question.resource}" target="_blank">${question.resource}</a>` : 
+                                        question.resource}
+                                </div>
+                            ` : ''}
+                        ` : ''}
+                    </div>
+                    
+                    <div class="button-container">
+                        <button class="btn btn-back" id="back-btn" onclick="previousQuestion()" ${currentQuestion === 0 ? 'disabled' : ''}>
+                            ← Back
+                        </button>
+                        <button class="btn btn-next" id="next-btn" onclick="nextQuestion()" ${previousAnswer ? '' : 'disabled'}>
+                            ${currentQuestion === quizData.length - 1 ? 'View Results' : 'Next Question'}
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            answered = previousAnswer ? true : false;
+        }
+
+        function selectAnswer(selectedIndex) {
+            if (answered) return;
+            
+            const question = quizData[currentQuestion];
+            const options = document.querySelectorAll('.option');
+            const feedback = document.getElementById('feedback');
+            const nextBtn = document.getElementById('next-btn');
+            
+            answered = true;
+            const isCorrect = selectedIndex === question.correct;
+            
+            // Record answer
+            userAnswers[currentQuestion] = {
+                question: currentQuestion,
+                selected: selectedIndex,
+                correct: isCorrect
+            };
+            
+            if (isCorrect) {
+                score += question.points;
+            }
+            
+            // Disable all options
+            options.forEach(opt => opt.classList.add('disabled'));
+            
+            // Mark selected answer
+            options[selectedIndex].classList.add(isCorrect ? 'correct' : 'incorrect');
+            
+            // Show correct answer if wrong
+            if (!isCorrect) {
+                options[question.correct].classList.add('correct');
+            }
+            
+            // Show feedback
+            feedback.className = `feedback show ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedback.innerHTML = `
+                <div class="feedback-header">
+                    <span class="feedback-icon">${isCorrect ? '✓' : '✗'}</span>
+                    <span>${isCorrect ? 'Correct!' : 'Incorrect'}</span>
+                </div>
+                <div class="feedback-content">
+                    ${question.explainer}
+                </div>
+                ${question.resource ? `
+                    <div class="feedback-resource">
+                        📚 Learn more: ${question.resource.startsWith('http') ? 
+                            `<a href="${question.resource}" target="_blank">${question.resource}</a>` : 
+                            question.resource}
+                    </div>
+                ` : ''}
+            `;
+            
+            // Enable next button
+            nextBtn.disabled = false;
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            
+            if (currentQuestion < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                loadQuestion();
+            }
+        }
+
+        function showResults() {
+            const content = document.getElementById('quiz-content');
+            const totalPoints = quizData.reduce((sum, q) => sum + q.points, 0);
+            const percentage = Math.round((score / totalPoints) * 100);
+            const correctCount = userAnswers.filter(a => a && a.correct).length;
+            
+            // Update progress to 100%
+            document.getElementById('progress-fill').style.width = '100%';
+            document.getElementById('progress-text').textContent = 'Assessment Complete';
+            
+            let message = '';
+            if (percentage >= 90) {
+                message = 'Outstanding! 🎉';
+            } else if (percentage >= 80) {
+                message = 'Great job! 👏';
+            } else if (percentage >= 70) {
+                message = 'Good work! 👍';
+            } else {
+                message = 'Keep studying! 📚';
+            }
+            
+            content.innerHTML = `
+                <div class="results-container">
+                    <div class="results-score">${percentage}%</div>
+                    <div class="results-message">${message}</div>
+                    
+                    <div class="results-details">
+                        <div class="results-stat">
+                            <span class="results-stat-label">Questions Correct</span>
+                            <span class="results-stat-value">${correctCount} / ${quizData.length}</span>
+                        </div>
+                        <div class="results-stat">
+                            <span class="results-stat-label">Points Earned</span>
+                            <span class="results-stat-value">${score} / ${totalPoints}</span>
+                        </div>
+                        <div class="results-stat">
+                            <span class="results-stat-label">Percentage</span>
+                            <span class="results-stat-value">${percentage}%</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-restart" onclick="restartQuiz()">
+                        Take Quiz Again
+                    </button>
+                </div>
+            `;
+        }
+
+        function restartQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            answered = false;
+            userAnswers = [];
+            loadQuestion();
+        }
+
+        // Start loading quiz data from Google Sheet
+        loadQuizData();
+    </script>
+</body>
+</html>
