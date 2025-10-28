@@ -8,6 +8,9 @@
     DYNAMIC QUIZ - Fetches questions from a Google Sheet CSV in real-time, 
     allowing you to update quiz content by simply editing the spreadsheet 
     without touching this HTML file.
+    
+    NOTE: In the Google Sheet, option_a should always be the CORRECT answer.
+    The quiz will automatically shuffle the options for display.
     -->
     <style>
         * {
@@ -429,6 +432,16 @@
         let answered = false;
         let userAnswers = [];
 
+        // Shuffle array using Fisher-Yates algorithm
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
         // Parse CSV data
         function parseCSV(csv) {
             const lines = csv.split('\n');
@@ -448,22 +461,27 @@
                     row[header] = values[index] ? values[index].trim() : '';
                 });
                 
-                // Convert to quiz format
-                const options = [
+                // Get options (option_a is always correct in the sheet)
+                const originalOptions = [
                     row.option_a,
                     row.option_b,
                     row.option_c,
                     row.option_d
                 ].filter(opt => opt && opt.length > 0);
                 
-                // Convert letter to index
-                const correctLetter = row.correct_answer.toUpperCase();
-                const correctIndex = correctLetter.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+                // Track which option is correct BEFORE shuffling
+                const correctAnswerText = originalOptions[0]; // option_a is always correct
+                
+                // Shuffle the options
+                const shuffledOptions = shuffleArray(originalOptions);
+                
+                // Find where the correct answer ended up after shuffling
+                const correctIndex = shuffledOptions.indexOf(correctAnswerText);
                 
                 questions.push({
                     number: parseInt(row.question_number) || i,
                     question: row.question_text,
-                    options: options,
+                    options: shuffledOptions,
                     correct: correctIndex,
                     points: parseInt(row.points) || 1,
                     explainer: row.explainer_formatted || '',
@@ -529,6 +547,7 @@
                 }
                 
                 console.log(`✓ Loaded ${quizData.length} questions from Google Sheet`);
+                console.log(`✓ Options have been shuffled for randomization`);
                 initQuiz();
                 
             } catch (error) {
@@ -752,6 +771,18 @@
             score = 0;
             answered = false;
             userAnswers = [];
+            
+            // Re-shuffle all questions
+            quizData = quizData.map(q => {
+                const correctText = q.options[q.correct];
+                const shuffled = shuffleArray(q.options);
+                return {
+                    ...q,
+                    options: shuffled,
+                    correct: shuffled.indexOf(correctText)
+                };
+            });
+            
             loadQuestion();
         }
 
