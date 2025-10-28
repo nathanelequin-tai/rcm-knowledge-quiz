@@ -467,7 +467,8 @@
                     correct: correctIndex,
                     points: parseInt(row.points) || 1,
                     explainer: row.explainer || '',
-                    resource: row.resource_link || ''
+                    resourceLink: row.resource_link || '',
+                    resourceName: row.resource_name || ''
                 });
             }
             
@@ -495,6 +496,18 @@
             result.push(current);
             
             return result.map(val => val.replace(/^"|"$/g, ''));
+        }
+        
+        // Helper function to format resource link
+        function formatResourceLink(link, name) {
+            if (!link) return '';
+            
+            // If we have both link and name, show name as clickable text
+            if (name) {
+                return `<a href="${link}" target="_blank">${name}</a>`;
+            }
+            // If only link, show the link itself
+            return `<a href="${link}" target="_blank">${link}</a>`;
         }
 
         // Load questions from Google Sheet
@@ -593,11 +606,9 @@
                             <div class="feedback-content">
                                 ${question.explainer}
                             </div>
-                            ${question.resource ? `
+                            ${question.resourceLink ? `
                                 <div class="feedback-resource">
-                                    📚 Learn more: ${question.resource.startsWith('http') ? 
-                                        `<a href="${question.resource}" target="_blank">${question.resource}</a>` : 
-                                        question.resource}
+                                    📚 Learn more: ${formatResourceLink(question.resourceLink, question.resourceName)}
                                 </div>
                             ` : ''}
                         ` : ''}
@@ -660,11 +671,9 @@
                 <div class="feedback-content">
                     ${question.explainer}
                 </div>
-                ${question.resource ? `
+                ${question.resourceLink ? `
                     <div class="feedback-resource">
-                        📚 Learn more: ${question.resource.startsWith('http') ? 
-                            `<a href="${question.resource}" target="_blank">${question.resource}</a>` : 
-                            question.resource}
+                        📚 Learn more: ${formatResourceLink(question.resourceLink, question.resourceName)}
                     </div>
                 ` : ''}
             `;
