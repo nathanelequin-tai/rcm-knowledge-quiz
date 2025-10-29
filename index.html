@@ -11,6 +11,8 @@
     
     NOTE: In the Google Sheet, option_a should always be the CORRECT answer.
     The quiz will automatically shuffle the options for display.
+    
+    Questions are also shuffled on each page load/restart for varied learning.
     -->
     <style>
         * {
@@ -641,7 +643,7 @@
                 const correctIndex = shuffledOptions.indexOf(correctAnswerText);
                 
                 questions.push({
-                    number: parseInt(row.question_number) || (index + 1),
+                    originalNumber: parseInt(row.question_number) || (index + 1), // Store original number from sheet
                     question: row.question_text.trim(),
                     options: shuffledOptions,
                     correct: correctIndex,
@@ -685,7 +687,11 @@
                     throw new Error('No questions found in the spreadsheet. Make sure your sheet has data starting in row 2.');
                 }
                 
+                // SHUFFLE QUESTIONS on initial load
+                quizData = shuffleArray(quizData);
+                
                 console.log(`✓ Loaded ${quizData.length} questions from Google Sheet`);
+                console.log(`✓ Questions have been shuffled for varied learning`);
                 console.log(`✓ Options have been shuffled for randomization`);
                 showModeSelection();
                 
@@ -778,10 +784,13 @@
             // In quiz mode, don't show feedback until the end
             const showFeedback = quizMode === 'study' && previousAnswer;
             
+            // Display sequential number (1, 2, 3...) instead of original question number
+            const displayNumber = currentQuestion + 1;
+            
             content.innerHTML = `
                 <div class="question-card">
                     <div class="question-header">
-                        <div class="question-number">Q${question.number}</div>
+                        <div class="question-number">Q${displayNumber}</div>
                         <div class="question-text">${question.question}</div>
                     </div>
                     
@@ -882,8 +891,11 @@
                         </div>
                     ` : ''}
                 `;
+                
+                // Enable next button
+                nextBtn.disabled = false;
             } 
-            // QUIZ MODE: Just mark as selected, no feedback
+            // QUIZ MODE: Just mark as selected, no feedback, auto-advance
             else {
                 options[selectedIndex].classList.add('selected');
                 
@@ -891,11 +903,7 @@
                 setTimeout(() => {
                     nextQuestion();
                 }, 500);
-                return; // Don't enable next button in quiz mode (auto-advances)
             }
-            
-            // Enable next button (only for study mode, quiz mode auto-advances)
-            nextBtn.disabled = false;
         }
 
         function nextQuestion() {
@@ -947,12 +955,13 @@
                             if (!answer) return '';
                             
                             const wasCorrect = answer.correct;
+                            const displayNum = qIndex + 1; // Sequential display number
                             
                             return `
                                 <div class="review-question ${wasCorrect ? 'correct' : 'incorrect'}">
                                     <div class="review-header">
                                         <span class="review-icon">${wasCorrect ? '✓' : '✗'}</span>
-                                        <span>Q${q.number}: ${q.question}</span>
+                                        <span>Q${displayNum}: ${q.question}</span>
                                     </div>
                                     
                                     <div class="review-options">
@@ -1030,8 +1039,8 @@
             userAnswers = [];
             quizMode = null;
             
-            // Re-shuffle all questions
-            quizData = quizData.map(q => {
+            // Re-shuffle questions AND options
+            quizData = shuffleArray(quizData.map(q => {
                 const correctText = q.options[q.correct];
                 const shuffled = shuffleArray(q.options);
                 return {
@@ -1039,7 +1048,7 @@
                     options: shuffled,
                     correct: shuffled.indexOf(correctText)
                 };
-            });
+            }));
             
             showModeSelection();
         }
