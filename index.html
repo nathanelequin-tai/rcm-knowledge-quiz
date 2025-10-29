@@ -85,6 +85,59 @@
             font-size: 16px;
         }
         
+        .mode-selection {
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        .mode-selection h2 {
+            color: #2d3748;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .mode-card {
+            flex: 1;
+            max-width: 300px;
+            background: #f7fafc;
+            border: 3px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-card:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+        
+        .mode-card h3 {
+            color: #2d3748;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+        
+        .mode-card p {
+            color: #4a5568;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        .mode-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
         .progress-bar {
             width: 100%;
             height: 8px;
@@ -105,6 +158,17 @@
             text-align: center;
             color: #718096;
             font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .mode-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
             margin-bottom: 20px;
         }
         
@@ -201,6 +265,12 @@
         .option.incorrect .option-letter {
             background: #f56565;
             border-color: #f56565;
+            color: white;
+        }
+        
+        .option.selected:not(.correct):not(.incorrect) .option-letter {
+            background: #667eea;
+            border-color: #667eea;
             color: white;
         }
         
@@ -394,6 +464,77 @@
             background: #38a169;
         }
         
+        .quiz-review {
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .review-question {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #e2e8f0;
+        }
+        
+        .review-question.correct {
+            border-left-color: #48bb78;
+        }
+        
+        .review-question.incorrect {
+            border-left-color: #f56565;
+        }
+        
+        .review-header {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .review-icon {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .review-options {
+            margin: 15px 0;
+        }
+        
+        .review-option {
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .review-option.user-answer {
+            background: #edf2f7;
+            border: 2px solid #667eea;
+        }
+        
+        .review-option.correct-answer {
+            background: #f0fff4;
+            border: 2px solid #48bb78;
+        }
+        
+        .review-option.wrong-answer {
+            background: #fff5f5;
+            border: 2px solid #f56565;
+        }
+        
+        .review-explainer {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #4a5568;
+        }
+        
         @media (max-width: 640px) {
             .quiz-container {
                 padding: 24px;
@@ -409,6 +550,14 @@
             
             .option {
                 padding: 14px 16px;
+            }
+            
+            .mode-buttons {
+                flex-direction: column;
+            }
+            
+            .mode-card {
+                max-width: 100%;
             }
         }
     </style>
@@ -434,6 +583,7 @@
         let score = 0;
         let answered = false;
         let userAnswers = [];
+        let quizMode = null; // null = not selected, 'study' = study mode, 'quiz' = quiz mode
 
         // Shuffle array using Fisher-Yates algorithm
         function shuffleArray(array) {
@@ -537,7 +687,7 @@
                 
                 console.log(`✓ Loaded ${quizData.length} questions from Google Sheet`);
                 console.log(`✓ Options have been shuffled for randomization`);
-                initQuiz();
+                showModeSelection();
                 
             } catch (error) {
                 app.innerHTML = `
@@ -556,12 +706,48 @@
             }
         }
 
-        function initQuiz() {
+        function showModeSelection() {
             const app = document.getElementById('app');
             app.innerHTML = `
                 <div class="header">
                     <h1>Healthcare RCM Knowledge Assessment</h1>
                     <p>Technical Program Manager Certification - ${quizData.length} Questions</p>
+                </div>
+                
+                <div class="mode-selection">
+                    <h2>Choose Your Learning Mode</h2>
+                    
+                    <div class="mode-buttons">
+                        <div class="mode-card" onclick="startQuiz('study')">
+                            <div class="mode-icon">📚</div>
+                            <h3>Study Mode</h3>
+                            <p>See instant feedback after each question. Perfect for learning and reviewing concepts.</p>
+                        </div>
+                        
+                        <div class="mode-card" onclick="startQuiz('quiz')">
+                            <div class="mode-icon">📝</div>
+                            <h3>Quiz Mode</h3>
+                            <p>Test your knowledge without feedback. See your results and review at the end.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function startQuiz(mode) {
+            quizMode = mode;
+            initQuiz();
+        }
+
+        function initQuiz() {
+            const app = document.getElementById('app');
+            const modeLabel = quizMode === 'study' ? '📚 Study Mode' : '📝 Quiz Mode';
+            
+            app.innerHTML = `
+                <div class="header">
+                    <h1>Healthcare RCM Knowledge Assessment</h1>
+                    <p>Technical Program Manager Certification - ${quizData.length} Questions</p>
+                    <div class="mode-badge">${modeLabel}</div>
                 </div>
                 
                 <div class="progress-text">
@@ -589,6 +775,9 @@
             // Check if this question was previously answered
             const previousAnswer = userAnswers[currentQuestion];
             
+            // In quiz mode, don't show feedback until the end
+            const showFeedback = quizMode === 'study' && previousAnswer;
+            
             content.innerHTML = `
                 <div class="question-card">
                     <div class="question-header">
@@ -598,15 +787,21 @@
                     
                     <div class="options">
                         ${question.options.map((option, index) => `
-                            <div class="option ${previousAnswer ? (previousAnswer.selected === index ? (previousAnswer.correct ? 'correct' : 'incorrect') : (index === question.correct ? 'correct' : '')) : ''} ${previousAnswer ? 'disabled' : ''}" onclick="selectAnswer(${index})">
+                            <div class="option ${
+                                quizMode === 'study' && previousAnswer 
+                                    ? (previousAnswer.selected === index 
+                                        ? (previousAnswer.correct ? 'correct' : 'incorrect') 
+                                        : (index === question.correct ? 'correct' : '')) 
+                                    : (quizMode === 'quiz' && previousAnswer && previousAnswer.selected === index ? 'selected' : '')
+                            } ${previousAnswer ? 'disabled' : ''}" onclick="selectAnswer(${index})">
                                 <div class="option-letter">${String.fromCharCode(65 + index)}</div>
                                 <div class="option-text">${option}</div>
                             </div>
                         `).join('')}
                     </div>
                     
-                    <div id="feedback" class="feedback ${previousAnswer ? 'show' : ''} ${previousAnswer ? (previousAnswer.correct ? 'correct' : 'incorrect') : ''}">
-                        ${previousAnswer ? `
+                    <div id="feedback" class="feedback ${showFeedback ? 'show' : ''} ${showFeedback ? (previousAnswer.correct ? 'correct' : 'incorrect') : ''}">
+                        ${showFeedback ? `
                             <div class="feedback-header">
                                 <span class="feedback-icon">${previousAnswer.correct ? '✓' : '✗'}</span>
                                 <span>${previousAnswer.correct ? 'Correct!' : 'Incorrect'}</span>
@@ -661,32 +856,45 @@
             // Disable all options
             options.forEach(opt => opt.classList.add('disabled'));
             
-            // Mark selected answer
-            options[selectedIndex].classList.add(isCorrect ? 'correct' : 'incorrect');
-            
-            // Show correct answer if wrong
-            if (!isCorrect) {
-                options[question.correct].classList.add('correct');
+            // STUDY MODE: Show immediate feedback
+            if (quizMode === 'study') {
+                // Mark selected answer
+                options[selectedIndex].classList.add(isCorrect ? 'correct' : 'incorrect');
+                
+                // Show correct answer if wrong
+                if (!isCorrect) {
+                    options[question.correct].classList.add('correct');
+                }
+                
+                // Show feedback
+                feedback.className = `feedback show ${isCorrect ? 'correct' : 'incorrect'}`;
+                feedback.innerHTML = `
+                    <div class="feedback-header">
+                        <span class="feedback-icon">${isCorrect ? '✓' : '✗'}</span>
+                        <span>${isCorrect ? 'Correct!' : 'Incorrect'}</span>
+                    </div>
+                    <div class="feedback-content">
+                        ${question.explainer}
+                    </div>
+                    ${question.resourceLink ? `
+                        <div class="feedback-resource">
+                            📚 Learn more: ${formatResourceLink(question.resourceLink, question.resourceName)}
+                        </div>
+                    ` : ''}
+                `;
+            } 
+            // QUIZ MODE: Just mark as selected, no feedback
+            else {
+                options[selectedIndex].classList.add('selected');
+                
+                // Auto-advance to next question after brief delay
+                setTimeout(() => {
+                    nextQuestion();
+                }, 500);
+                return; // Don't enable next button in quiz mode (auto-advances)
             }
             
-            // Show feedback
-            feedback.className = `feedback show ${isCorrect ? 'correct' : 'incorrect'}`;
-            feedback.innerHTML = `
-                <div class="feedback-header">
-                    <span class="feedback-icon">${isCorrect ? '✓' : '✗'}</span>
-                    <span>${isCorrect ? 'Correct!' : 'Incorrect'}</span>
-                </div>
-                <div class="feedback-content">
-                    ${question.explainer}
-                </div>
-                ${question.resourceLink ? `
-                    <div class="feedback-resource">
-                        📚 Learn more: ${formatResourceLink(question.resourceLink, question.resourceName)}
-                    </div>
-                ` : ''}
-            `;
-            
-            // Enable next button
+            // Enable next button (only for study mode, quiz mode auto-advances)
             nextBtn.disabled = false;
         }
 
@@ -728,6 +936,64 @@
                 message = 'Keep studying! 📚';
             }
             
+            // Build review section for quiz mode
+            let reviewHTML = '';
+            if (quizMode === 'quiz') {
+                reviewHTML = `
+                    <div class="quiz-review">
+                        <h3 style="margin-bottom: 20px; color: #2d3748;">Review Your Answers</h3>
+                        ${quizData.map((q, qIndex) => {
+                            const answer = userAnswers[qIndex];
+                            if (!answer) return '';
+                            
+                            const wasCorrect = answer.correct;
+                            
+                            return `
+                                <div class="review-question ${wasCorrect ? 'correct' : 'incorrect'}">
+                                    <div class="review-header">
+                                        <span class="review-icon">${wasCorrect ? '✓' : '✗'}</span>
+                                        <span>Q${q.number}: ${q.question}</span>
+                                    </div>
+                                    
+                                    <div class="review-options">
+                                        ${q.options.map((opt, optIndex) => {
+                                            let classes = 'review-option';
+                                            if (optIndex === answer.selected && !wasCorrect) {
+                                                classes += ' wrong-answer';
+                                            }
+                                            if (optIndex === q.correct) {
+                                                classes += ' correct-answer';
+                                            }
+                                            if (optIndex === answer.selected && wasCorrect) {
+                                                classes += ' user-answer correct-answer';
+                                            }
+                                            
+                                            return `
+                                                <div class="${classes}">
+                                                    <div style="margin-right: 12px; font-weight: 600;">${String.fromCharCode(65 + optIndex)}</div>
+                                                    <div>${opt}</div>
+                                                    ${optIndex === q.correct ? ' <span style="margin-left: auto; color: #48bb78;">✓ Correct</span>' : ''}
+                                                    ${optIndex === answer.selected && !wasCorrect ? ' <span style="margin-left: auto; color: #f56565;">Your Answer</span>' : ''}
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                    
+                                    <div class="review-explainer">
+                                        ${q.explainer}
+                                        ${q.resourceLink ? `
+                                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                                                📚 Learn more: ${formatResourceLink(q.resourceLink, q.resourceName)}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+            
             content.innerHTML = `
                 <div class="results-container">
                     <div class="results-score">${percentage}%</div>
@@ -748,6 +1014,8 @@
                         </div>
                     </div>
                     
+                    ${reviewHTML}
+                    
                     <button class="btn btn-restart" onclick="restartQuiz()">
                         Take Quiz Again
                     </button>
@@ -760,6 +1028,7 @@
             score = 0;
             answered = false;
             userAnswers = [];
+            quizMode = null;
             
             // Re-shuffle all questions
             quizData = quizData.map(q => {
@@ -772,7 +1041,7 @@
                 };
             });
             
-            loadQuestion();
+            showModeSelection();
         }
 
         // Start loading quiz data from Google Sheet
