@@ -534,38 +534,65 @@
             return shuffled;
         }
         
-        // Parse CSV from Google Sheets
+        // Robust CSV parser that handles quoted fields with commas and newlines
         function parseCSV(csv) {
-            const lines = csv.split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const rows = [];
+            let currentRow = [];
+            let currentField = '';
+            let insideQuotes = false;
+            
+            for (let i = 0; i < csv.length; i++) {
+                const char = csv[i];
+                const nextChar = csv[i + 1];
+                
+                if (char === '"') {
+                    if (insideQuotes && nextChar === '"') {
+                        // Escaped quote ("")
+                        currentField += '"';
+                        i++; // Skip next quote
+                    } else {
+                        // Toggle quote state
+                        insideQuotes = !insideQuotes;
+                    }
+                } else if (char === ',' && !insideQuotes) {
+                    // Field separator
+                    currentRow.push(currentField);
+                    currentField = '';
+                } else if (char === '\n' && !insideQuotes) {
+                    // Row separator
+                    currentRow.push(currentField);
+                    if (currentRow.some(field => field.trim() !== '')) {
+                        rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentField = '';
+                } else if (char === '\r' && !insideQuotes) {
+                    // Skip carriage returns (Windows line endings)
+                    continue;
+                } else {
+                    currentField += char;
+                }
+            }
+            
+            // Push last field and row
+            if (currentField || currentRow.length > 0) {
+                currentRow.push(currentField);
+                if (currentRow.some(field => field.trim() !== '')) {
+                    rows.push(currentRow);
+                }
+            }
+            
+            // First row is headers
+            const headers = rows[0].map(h => h.trim());
             const data = [];
             
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue;
-                
-                const values = [];
-                let current = '';
-                let inQuotes = false;
-                
-                for (let char of lines[i]) {
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        values.push(current.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
-                        current = '';
-                    } else {
-                        current += char;
-                    }
-                }
-                values.push(current.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
-                
-                if (values.length >= 9) {
-                    const row = {};
-                    headers.forEach((header, index) => {
-                        row[header] = values[index] || '';
-                    });
-                    data.push(row);
-                }
+            // Convert rows to objects
+            for (let i = 1; i < rows.length; i++) {
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = rows[i][index] || '';
+                });
+                data.push(row);
             }
             
             return data;
