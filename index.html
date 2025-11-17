@@ -657,6 +657,8 @@
                 const hasAnswer = userAnswers.hasOwnProperty(currentQuestionIndex);
                 
                 if (mode === 'quiz') {
+                    // Quiz mode: Next button ALWAYS enabled
+                    nextBtn.disabled = false;
                     if (hasAnswer) {
                         nextBtn.textContent = 'Next →';
                         nextBtn.className = 'nav-btn btn-next';
@@ -665,7 +667,7 @@
                         nextBtn.className = 'nav-btn btn-skip';
                     }
                 } else {
-                    // Study mode
+                    // Study mode: Next button disabled until answer selected
                     nextBtn.textContent = 'Next →';
                     nextBtn.className = 'nav-btn btn-next';
                     nextBtn.disabled = !hasAnswer;
