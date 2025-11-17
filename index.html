@@ -4,16 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Healthcare RCM Knowledge Assessment</title>
-    <!--
-    DYNAMIC QUIZ - Fetches questions from a Google Sheet CSV in real-time, 
-    allowing you to update quiz content by simply editing the spreadsheet 
-    without touching this HTML file.
-    
-    NOTE: In the Google Sheet, option_a should always be the CORRECT answer.
-    The quiz will automatically shuffle the options for display.
-    
-    Questions are also shuffled on each page load/restart for varied learning.
-    -->
     <style>
         * {
             margin: 0;
@@ -26,126 +16,100 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
         
-        .quiz-container {
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 800px;
-            width: 100%;
-            padding: 40px;
-            position: relative;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-            color: #4a5568;
-        }
-        
-        .loading-spinner {
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error {
-            background: #fff5f5;
-            border: 2px solid #f56565;
-            border-radius: 12px;
-            padding: 20px;
-            color: #742a2a;
-            text-align: center;
+            overflow: hidden;
         }
         
         .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
             text-align: center;
-            margin-bottom: 30px;
         }
         
         .header h1 {
-            color: #2d3748;
-            font-size: 28px;
+            font-size: 32px;
             margin-bottom: 10px;
         }
         
         .header p {
-            color: #718096;
-            font-size: 16px;
+            font-size: 18px;
+            opacity: 0.9;
         }
         
         .mode-selection {
+            padding: 40px;
             text-align: center;
-            padding: 20px 0;
         }
         
         .mode-selection h2 {
-            color: #2d3748;
-            font-size: 24px;
+            color: #333;
             margin-bottom: 30px;
+            font-size: 24px;
         }
         
         .mode-buttons {
             display: flex;
             gap: 20px;
             justify-content: center;
-            margin-top: 30px;
+            flex-wrap: wrap;
         }
         
-        .mode-card {
+        .mode-btn {
             flex: 1;
-            max-width: 300px;
-            background: #f7fafc;
-            border: 3px solid #e2e8f0;
-            border-radius: 16px;
+            min-width: 250px;
             padding: 30px;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            background: white;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
         
-        .mode-card:hover {
-            border-color: #667eea;
-            background: #edf2f7;
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        .mode-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
         }
         
-        .mode-card h3 {
-            color: #2d3748;
+        .mode-btn h3 {
             font-size: 22px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         
-        .mode-card p {
-            color: #4a5568;
-            font-size: 15px;
-            line-height: 1.6;
+        .mode-btn p {
+            font-size: 14px;
+            opacity: 0.8;
         }
         
-        .mode-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
+        .content {
+            padding: 40px;
+        }
+        
+        .progress-container {
+            margin-bottom: 30px;
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 14px;
         }
         
         .progress-bar {
-            width: 100%;
             height: 8px;
-            background: #e2e8f0;
+            background: #e0e0e0;
             border-radius: 4px;
-            margin-bottom: 30px;
             overflow: hidden;
         }
         
@@ -153,245 +117,120 @@
             height: 100%;
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             transition: width 0.3s ease;
-            border-radius: 4px;
         }
         
-        .progress-text {
-            text-align: center;
-            color: #718096;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-        
-        .mode-badge {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-        
-        .question-card {
+        .question-container {
             margin-bottom: 30px;
         }
         
-        .question-header {
-            display: flex;
-            align-items: start;
-            margin-bottom: 20px;
-        }
-        
-        .question-number {
-            background: #667eea;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-        
         .question-text {
-            color: #2d3748;
             font-size: 20px;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.6;
             font-weight: 500;
-            line-height: 1.5;
         }
         
         .options {
-            margin: 25px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
         
         .option {
-            background: #f7fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
             padding: 16px 20px;
-            margin-bottom: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
+            transition: all 0.2s;
+            background: white;
         }
         
-        .option:hover:not(.disabled) {
+        .option:hover {
             border-color: #667eea;
-            background: #edf2f7;
-            transform: translateX(4px);
+            background: #f8f9ff;
         }
         
         .option.selected {
             border-color: #667eea;
-            background: #edf2f7;
+            background: #f0f3ff;
         }
         
         .option.correct {
-            border-color: #48bb78;
-            background: #f0fff4;
+            border-color: #4caf50;
+            background: #e8f5e9;
         }
         
         .option.incorrect {
-            border-color: #f56565;
-            background: #fff5f5;
-        }
-        
-        .option.disabled {
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-        
-        .option-letter {
-            background: white;
-            border: 2px solid #cbd5e0;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            margin-right: 15px;
-            flex-shrink: 0;
-            color: #4a5568;
-        }
-        
-        .option.correct .option-letter {
-            background: #48bb78;
-            border-color: #48bb78;
-            color: white;
-        }
-        
-        .option.incorrect .option-letter {
-            background: #f56565;
-            border-color: #f56565;
-            color: white;
-        }
-        
-        .option.selected:not(.correct):not(.incorrect) .option-letter {
-            background: #667eea;
-            border-color: #667eea;
-            color: white;
-        }
-        
-        .option-text {
-            flex: 1;
-            color: #2d3748;
-            font-size: 16px;
-            line-height: 1.5;
+            border-color: #f44336;
+            background: #ffebee;
         }
         
         .feedback {
-            background: #edf2f7;
-            border-left: 4px solid #667eea;
+            margin-top: 20px;
             padding: 20px;
             border-radius: 8px;
-            margin: 20px 0;
-            display: none;
-        }
-        
-        .feedback.show {
-            display: block;
-            animation: slideDown 0.3s ease;
+            line-height: 1.6;
         }
         
         .feedback.correct {
-            background: #f0fff4;
-            border-left-color: #48bb78;
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
         }
         
         .feedback.incorrect {
-            background: #fff5f5;
-            border-left-color: #f56565;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            background: #ffebee;
+            border-left: 4px solid #f44336;
         }
         
         .feedback-header {
+            font-weight: bold;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
-            margin-bottom: 12px;
-            font-weight: 600;
-            font-size: 18px;
+            gap: 8px;
         }
         
-        .feedback-icon {
-            margin-right: 10px;
-            font-size: 24px;
-        }
-        
-        .feedback.correct .feedback-header {
-            color: #22543d;
-        }
-        
-        .feedback.incorrect .feedback-header {
-            color: #742a2a;
-        }
-        
-        .feedback-content {
-            color: #2d3748;
-            line-height: 1.7;
-            font-size: 15px;
-        }
-        
-        .feedback-resource {
+        .resource-link {
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px solid rgba(0,0,0,0.1);
-            font-size: 14px;
-            color: #4a5568;
         }
         
-        .feedback-resource a {
+        .resource-link a {
             color: #667eea;
             text-decoration: none;
             font-weight: 500;
         }
         
-        .feedback-resource a:hover {
+        .resource-link a:hover {
             text-decoration: underline;
         }
         
-        .button-container {
+        .navigation {
             display: flex;
-            justify-content: space-between;
             gap: 12px;
+            justify-content: space-between;
             margin-top: 30px;
         }
         
-        .btn {
-            padding: 12px 32px;
+        .nav-btn {
+            padding: 12px 30px;
             border: none;
             border-radius: 8px;
             font-size: 16px;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s;
+            font-weight: 500;
         }
         
         .btn-back {
-            background: #e2e8f0;
-            color: #4a5568;
+            background: #e0e0e0;
+            color: #333;
         }
         
-        .btn-back:hover:not(:disabled) {
-            background: #cbd5e0;
-        }
-        
-        .btn-back:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
+        .btn-back:hover {
+            background: #d0d0d0;
         }
         
         .btn-next {
@@ -401,192 +240,290 @@
         
         .btn-next:hover:not(:disabled) {
             background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-skip {
+            background: #ffa726;
+            color: white;
+        }
+        
+        .btn-skip:hover {
+            background: #fb8c00;
         }
         
         .btn-next:disabled {
-            background: #cbd5e0;
+            opacity: 0.5;
             cursor: not-allowed;
         }
         
-        .results-container {
+        .btn-submit {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-submit:hover:not(:disabled) {
+            background: #43a047;
+        }
+        
+        .btn-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .results {
             text-align: center;
         }
         
-        .results-score {
-            font-size: 64px;
-            font-weight: 700;
-            color: #667eea;
+        .score-display {
+            font-size: 72px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin: 20px 0;
         }
         
-        .results-message {
-            font-size: 24px;
-            color: #2d3748;
+        .results h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .results p {
+            color: #666;
             margin-bottom: 30px;
-        }
-        
-        .results-details {
-            background: #f7fafc;
-            border-radius: 12px;
-            padding: 25px;
-            margin: 20px 0;
-            text-align: left;
-        }
-        
-        .results-stat {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .results-stat:last-child {
-            border-bottom: none;
-        }
-        
-        .results-stat-label {
-            color: #4a5568;
-            font-weight: 500;
-        }
-        
-        .results-stat-value {
-            color: #2d3748;
-            font-weight: 600;
+            font-size: 18px;
         }
         
         .btn-restart {
-            background: #48bb78;
+            background: #667eea;
             color: white;
-            margin-top: 20px;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
         }
         
         .btn-restart:hover {
-            background: #38a169;
+            background: #5568d3;
         }
         
-        .quiz-review {
-            margin-top: 30px;
-            text-align: left;
+        .loading {
+            text-align: center;
+            padding: 60px 40px;
+            color: #666;
         }
         
-        .review-question {
-            background: #f7fafc;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-left: 4px solid #e2e8f0;
+        .review-section {
+            background: #fff3e0;
+            border: 2px solid #ffa726;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
         }
         
-        .review-question.correct {
-            border-left-color: #48bb78;
-        }
-        
-        .review-question.incorrect {
-            border-left-color: #f56565;
-        }
-        
-        .review-header {
-            font-weight: 600;
-            color: #2d3748;
+        .review-section h3 {
+            color: #e65100;
             margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .review-icon {
-            margin-right: 10px;
             font-size: 20px;
         }
         
-        .review-options {
-            margin: 15px 0;
-        }
-        
-        .review-option {
-            padding: 10px 15px;
-            margin: 8px 0;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .review-option.user-answer {
-            background: #edf2f7;
-            border: 2px solid #667eea;
-        }
-        
-        .review-option.correct-answer {
-            background: #f0fff4;
-            border: 2px solid #48bb78;
-        }
-        
-        .review-option.wrong-answer {
-            background: #fff5f5;
-            border: 2px solid #f56565;
-        }
-        
-        .review-explainer {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 14px;
+        .review-section p {
+            color: #666;
+            margin-bottom: 15px;
             line-height: 1.6;
-            color: #4a5568;
         }
         
-        @media (max-width: 640px) {
-            .quiz-container {
-                padding: 24px;
-            }
-            
-            .header h1 {
-                font-size: 24px;
-            }
-            
-            .question-text {
-                font-size: 18px;
-            }
-            
-            .option {
-                padding: 14px 16px;
-            }
-            
-            .mode-buttons {
-                flex-direction: column;
-            }
-            
-            .mode-card {
-                max-width: 100%;
-            }
+        .unanswered-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .question-jump {
+            display: inline-block;
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #ffa726;
+            border-radius: 6px;
+            color: #e65100;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .question-jump:hover {
+            background: #ffa726;
+            color: white;
+        }
+        
+        .answered-indicator {
+            display: inline-block;
+            margin-left: 8px;
+            color: #4caf50;
+            font-size: 18px;
+        }
+        
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="quiz-container" id="app">
-        <div class="loading">
-            <div class="loading-spinner"></div>
-            <p>Loading quiz questions...</p>
+    <div class="container">
+        <div class="header">
+            <h1>Healthcare RCM Knowledge Assessment</h1>
+            <p>Thoughtful AI - Technical Program Manager Certification</p>
+        </div>
+        
+        <div id="modeSelection" class="mode-selection">
+            <h2>Choose Your Mode</h2>
+            <div class="mode-buttons">
+                <div class="mode-btn" onclick="startMode('study')">
+                    <h3>📚 Study Mode</h3>
+                    <p>Get immediate feedback on each question. Perfect for learning and reviewing concepts.</p>
+                </div>
+                <div class="mode-btn" onclick="startMode('quiz')">
+                    <h3>✅ Quiz Mode</h3>
+                    <p>Test your knowledge. Review all answers before submitting. Track your progress.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading hidden">
+            <p>Loading questions...</p>
+        </div>
+        
+        <div id="quizContent" class="content hidden">
+            <div class="progress-container">
+                <div class="progress-text">
+                    <span id="questionProgress">Question 1 of 5</span>
+                    <span id="pointsDisplay">Points: 0 / 5</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div id="questionContainer" class="question-container"></div>
+            
+            <div id="reviewSection" class="review-section hidden">
+                <h3>⚠️ Review Your Answers</h3>
+                <p>You haven't answered all questions yet. Click on any question number below to jump back and answer it:</p>
+                <div id="unansweredList" class="unanswered-list"></div>
+                <p style="margin-top: 20px; font-size: 14px; color: #999;">You must answer all questions before submitting the quiz.</p>
+            </div>
+            
+            <div class="navigation">
+                <button id="backBtn" class="nav-btn btn-back" onclick="previousQuestion()">← Back</button>
+                <button id="nextBtn" class="nav-btn btn-next" onclick="nextQuestion()">Next →</button>
+            </div>
+        </div>
+        
+        <div id="results" class="content hidden">
+            <div class="results">
+                <h2>Quiz Complete! 🎉</h2>
+                <div class="score-display" id="scoreDisplay">0%</div>
+                <p id="scoreText">You answered 0 out of 5 questions correctly</p>
+                <p id="pointsText">Total Points: 0 / 5</p>
+                <p id="encouragement"></p>
+                <button class="btn-restart" onclick="restartQuiz()">Take Quiz Again</button>
+            </div>
         </div>
     </div>
 
-    <!-- PapaParse CSV Parser Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
     <script>
-        // ⚙️ CONFIGURATION - YOUR GOOGLE SHEET CSV URL
+        // TOGGLE THIS: Set to true to use static test data, false to load from Google Sheets
+        const USE_TEST_DATA = false;
+        
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHdio_V6Rf0S4W-zxOtCEoCSlUSSQHfGDyyQtstYxMplyyVHB1bwbaKR1CFXCpc_BmDIFQ0HXEIubb/pub?output=csv';
         
-        // Global state
-        let quizData = [];
-        let currentQuestion = 0;
-        let score = 0;
-        let answered = false;
-        let userAnswers = [];
-        let quizMode = null; // null = not selected, 'study' = study mode, 'quiz' = quiz mode
-
+        // Static test questions for preview (exact Quiz mode functionality)
+        const TEST_QUESTIONS = [
+            {
+                number: 1,
+                question: "What is the difference between Medicaid and Medicare?",
+                options: [
+                    "Medicaid is a healthcare program for veterans while Medicare is a program for active military members",
+                    "Medicaid is a joint federal and state program that provides healthcare to low-income individuals while Medicare is a federal program that primarily serves people aged 65 and older regardless of income",
+                    "Medicaid and Medicare are the same program just under different names depending on the state",
+                    "Medicaid is a federal program that only covers people over the age of 65 while Medicare is a state-run program for low-income individuals"
+                ],
+                correct: 1, // Index of correct answer after shuffle (will be recalculated)
+                points: 1,
+                explainer: "<strong>Medicaid</strong> and <strong>Medicare</strong> serve different populations with different funding structures. <strong>Medicare</strong> is a federal insurance program primarily for people 65+ (though some younger people with disabilities qualify), funded through payroll taxes and premiums. <strong>Medicaid</strong> is a joint federal-state assistance program for low-income individuals and families, with eligibility and benefits varying by state.<br><br>A common mistake is reversing these two programs—remember that <strong>MediCARE</strong> covers seniors (CARE for the elderly), while <strong>MedicAID</strong> provides AID to those with financial need, regardless of age.",
+                resourceLink: "https://www.notion.so/1aaf43a78fa4807187decdccf344364a",
+                resourceName: "Onboarding - Understanding the Healthcare RCM Landscape"
+            },
+            {
+                number: 2,
+                question: "What are ambulatory services?",
+                options: [
+                    "Healthcare services provided to patients who are admitted to the hospital for overnight care",
+                    "Healthcare services provided on an outpatient basis where patients receive care without being admitted to a hospital",
+                    "Emergency medical services provided at the scene of an accident",
+                    "Services that involve the transportation of patients from one facility to another by ambulance"
+                ],
+                correct: 1,
+                points: 1,
+                explainer: "<strong>Ambulatory services</strong> (also called outpatient services) are medical services provided to patients who do not require overnight hospitalization. This includes office visits, diagnostic tests, same-day surgeries, and emergency department visits where the patient is not admitted.<br><br>Despite the similar sound, <strong>ambulatory services have nothing to do with ambulances</strong>—the term comes from the Latin word <em>ambulare</em> meaning \"to walk,\" referring to patients who can walk in and out for care.",
+                resourceLink: "",
+                resourceName: ""
+            },
+            {
+                number: 3,
+                question: "Which coding system is used to describe medical diagnoses in claims?",
+                options: [
+                    "CPT",
+                    "HCPCS",
+                    "ICD-10",
+                    "DRG"
+                ],
+                correct: 2,
+                points: 1,
+                explainer: "<strong>ICD-10</strong> (International Classification of Diseases 10th Revision) is the coding system used to report medical diagnoses on healthcare claims. With over 70,000 codes updated annually, <strong>ICD-10</strong> provides detailed classification of diseases, symptoms, abnormal findings, and external causes of injury.<br><br>While <strong>CPT codes</strong> describe the procedures and services performed, <strong>ICD-10 codes</strong> explain why those procedures were medically necessary by documenting the patient's condition. Both code types appear on claims, but they serve different purposes—think of ICD-10 as the \"what's wrong\" and CPT as the \"what we did about it.\"",
+                resourceLink: "https://www.notion.so/618943d810f749b482a5b55e9e807d33",
+                resourceName: "05. Diagnosis, Service, and CPT Codes"
+            },
+            {
+                number: 4,
+                question: "What is a Medicare MAC?",
+                options: [
+                    "A centralized database used by Medicare to store patient medical records",
+                    "A regional contractor responsible for processing Medicare claims and managing payments for healthcare providers",
+                    "A government agency that determines national healthcare policy for all insurance plans",
+                    "A private insurer that offers supplemental coverage to Medicare beneficiaries"
+                ],
+                correct: 1,
+                points: 1,
+                explainer: "<strong>A Medicare Administrative Contractor (MAC)</strong> is a private health insurance company contracted by the <strong>Centers for Medicare and Medicaid Services (CMS)</strong> to administer Medicare fee-for-service operations within specific geographic jurisdictions. There are currently <strong>12 A/B MAC jurisdictions</strong> that process both Medicare Part A (hospital/facility) and Part B (physician/professional) claims.",
+                resourceLink: "https://www.cms.gov/medicare/coding-billing/medicare-administrative-contractors-macs/whats-mac",
+                resourceName: "What's a MAC - CMS.gov"
+            },
+            {
+                number: 5,
+                question: "What is an X12 835 transaction?",
+                options: [
+                    "A standard electronic file used by payers to transmit claim payment and remittance information to providers",
+                    "A patient record format used to document clinical encounters in an EHR system",
+                    "A billing code set used to describe medical procedures and services for claims submission",
+                    "A report generated by providers to request prior authorization from payers"
+                ],
+                correct: 0,
+                points: 1,
+                explainer: "<strong>The X12 835 transaction</strong>, officially called <strong>Health Care Claim Payment/Advice</strong>, is the electronic standard for transmitting payment and remittance information from payers to healthcare providers. It is the electronic equivalent of the paper <strong>Explanation of Benefits (EOB)</strong> and is commonly referred to as <strong>Electronic Remittance Advice (ERA)</strong>.",
+                resourceLink: "https://www.notion.so/35c5e0c5b7b4445fae8ee1f72284b616",
+                resourceName: "04. ERAs, EOBs, 835s"
+            }
+        ];
+        
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let userAnswers = {};
+        let mode = 'study';
+        
         // Shuffle array using Fisher-Yates algorithm
         function shuffleArray(array) {
             const shuffled = [...array];
@@ -596,465 +533,356 @@
             }
             return shuffled;
         }
-
-        // Parse CSV data using PapaParse (handles all edge cases properly)
-        function parseCSV(csvText) {
-            // Use PapaParse for robust CSV parsing
-            const parsed = Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                dynamicTyping: false, // Keep everything as strings for now
-                transformHeader: (header) => header.trim()
-            });
+        
+        // Parse CSV from Google Sheets
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const data = [];
             
-            if (parsed.errors && parsed.errors.length > 0) {
-                console.warn('CSV parsing warnings:', parsed.errors);
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let char of lines[i]) {
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                
+                if (values.length >= 9) {
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index] || '';
+                    });
+                    data.push(row);
+                }
             }
             
-            const questions = [];
-            
-            parsed.data.forEach((row, index) => {
-                // Skip rows without question text
-                if (!row.question_text || !row.question_text.trim()) {
-                    return;
-                }
-                
-                // Get options (option_a is always correct in the sheet)
-                const originalOptions = [
-                    row.option_a,
-                    row.option_b,
-                    row.option_c,
-                    row.option_d
-                ].filter(opt => opt && opt.trim().length > 0);
-                
-                // Must have at least 2 options
-                if (originalOptions.length < 2) {
-                    console.warn(`Question ${index + 1} skipped: insufficient options`);
-                    return;
-                }
-                
-                // Track which option is correct BEFORE shuffling
-                const correctAnswerText = originalOptions[0]; // option_a is always correct
-                
-                // Shuffle the options
-                const shuffledOptions = shuffleArray(originalOptions);
-                
-                // Find where the correct answer ended up after shuffling
-                const correctIndex = shuffledOptions.indexOf(correctAnswerText);
-                
-                questions.push({
-                    originalNumber: parseInt(row.question_number) || (index + 1), // Store original number from sheet
-                    question: row.question_text.trim(),
-                    options: shuffledOptions,
-                    correct: correctIndex,
-                    points: parseInt(row.points) || 1,
-                    explainer: row.explainer_formatted || '',
-                    resourceLink: row.resource_link || '',
-                    resourceName: row.resource_name || ''
-                });
-            });
-            
-            return questions;
+            return data;
         }
         
-        // Helper function to format resource link
-        function formatResourceLink(link, name) {
-            if (!link) return '';
-            
-            // If we have both link and name, show name as clickable text
-            if (name) {
-                return `<a href="${link}" target="_blank">${name}</a>`;
-            }
-            // If only link, show the link itself
-            return `<a href="${link}" target="_blank">${link}</a>`;
-        }
-
         // Load questions from Google Sheet
-        async function loadQuizData() {
-            const app = document.getElementById('app');
-            
+        async function loadQuestionsFromSheet() {
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                const csv = await response.text();
+                const data = parseCSV(csv);
                 
-                if (!response.ok) {
-                    throw new Error('Failed to load quiz data. Check that your Google Sheet is published and the URL is correct.');
-                }
-                
-                const csvText = await response.text();
-                quizData = parseCSV(csvText);
-                
-                if (quizData.length === 0) {
-                    throw new Error('No questions found in the spreadsheet. Make sure your sheet has data starting in row 2.');
-                }
-                
-                // SHUFFLE QUESTIONS on initial load
-                quizData = shuffleArray(quizData);
-                
-                console.log(`✓ Loaded ${quizData.length} questions from Google Sheet`);
-                console.log(`✓ Questions have been shuffled for varied learning`);
-                console.log(`✓ Options have been shuffled for randomization`);
-                showModeSelection();
-                
+                return data.map(row => {
+                    const options = [
+                        row.option_a,
+                        row.option_b,
+                        row.option_c,
+                        row.option_d
+                    ].filter(opt => opt && opt.trim() !== '');
+                    
+                    // Shuffle options and track where correct answer ended up
+                    const shuffledOptions = shuffleArray(options);
+                    const correctIndex = shuffledOptions.indexOf(row.option_a);
+                    
+                    return {
+                        number: parseInt(row.question_number),
+                        question: row.question_text,
+                        options: shuffledOptions,
+                        correct: correctIndex,
+                        points: parseInt(row.points) || 1,
+                        explainer: row.explainer_formatted || row.explainer_text,
+                        resourceLink: row.resource_link || '',
+                        resourceName: row.resource_name || ''
+                    };
+                }).filter(q => q.question && q.options.length > 0);
             } catch (error) {
-                app.innerHTML = `
-                    <div class="error">
-                        <h2 style="margin-bottom: 15px;">⚠️ Error Loading Quiz</h2>
-                        <p style="margin-bottom: 10px;">${error.message}</p>
-                        <p style="font-size: 14px; margin-top: 20px;">
-                            <strong>Troubleshooting:</strong><br>
-                            1. Make sure your Google Sheet is shared "Anyone with the link"<br>
-                            2. Verify you're using the CSV export URL<br>
-                            3. Check browser console (F12) for more details
-                        </p>
-                    </div>
-                `;
-                console.error('Quiz load error:', error);
+                console.error('Error loading questions:', error);
+                return null;
             }
         }
-
-        function showModeSelection() {
-            const app = document.getElementById('app');
-            app.innerHTML = `
-                <div class="header">
-                    <h1>Healthcare RCM Knowledge Assessment</h1>
-                    <p>Technical Program Manager Certification - ${quizData.length} Questions</p>
-                </div>
+        
+        // Prepare test questions with shuffling
+        function prepareTestQuestions() {
+            return TEST_QUESTIONS.map(q => {
+                const shuffledOptions = shuffleArray([...q.options]);
+                const originalCorrect = q.options[q.correct];
+                const newCorrectIndex = shuffledOptions.indexOf(originalCorrect);
                 
-                <div class="mode-selection">
-                    <h2>Choose Your Learning Mode</h2>
-                    
-                    <div class="mode-buttons">
-                        <div class="mode-card" onclick="startQuiz('study')">
-                            <div class="mode-icon">📚</div>
-                            <h3>Study Mode</h3>
-                            <p>See instant feedback after each question. Perfect for learning and reviewing concepts.</p>
-                        </div>
-                        
-                        <div class="mode-card" onclick="startQuiz('quiz')">
-                            <div class="mode-icon">📝</div>
-                            <h3>Quiz Mode</h3>
-                            <p>Test your knowledge without feedback. See your results and review at the end.</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function startQuiz(mode) {
-            quizMode = mode;
-            initQuiz();
-        }
-
-        function initQuiz() {
-            const app = document.getElementById('app');
-            const modeLabel = quizMode === 'study' ? '📚 Study Mode' : '📝 Quiz Mode';
-            
-            app.innerHTML = `
-                <div class="header">
-                    <h1>Healthcare RCM Knowledge Assessment</h1>
-                    <p>Technical Program Manager Certification - ${quizData.length} Questions</p>
-                    <div class="mode-badge">${modeLabel}</div>
-                </div>
-                
-                <div class="progress-text">
-                    <span id="progress-text">Question 1 of ${quizData.length}</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
-                </div>
-                
-                <div id="quiz-content"></div>
-            `;
-            
-            loadQuestion();
-        }
-
-        function loadQuestion() {
-            const question = quizData[currentQuestion];
-            const content = document.getElementById('quiz-content');
-            
-            // Update progress
-            const progressPercent = ((currentQuestion) / quizData.length) * 100;
-            document.getElementById('progress-fill').style.width = progressPercent + '%';
-            document.getElementById('progress-text').textContent = `Question ${currentQuestion + 1} of ${quizData.length}`;
-            
-            // Check if this question was previously answered
-            const previousAnswer = userAnswers[currentQuestion];
-            
-            // In quiz mode, don't show feedback until the end
-            const showFeedback = quizMode === 'study' && previousAnswer;
-            
-            // Display sequential number (1, 2, 3...) instead of original question number
-            const displayNumber = currentQuestion + 1;
-            
-            content.innerHTML = `
-                <div class="question-card">
-                    <div class="question-header">
-                        <div class="question-number">Q${displayNumber}</div>
-                        <div class="question-text">${question.question}</div>
-                    </div>
-                    
-                    <div class="options">
-                        ${question.options.map((option, index) => `
-                            <div class="option ${
-                                quizMode === 'study' && previousAnswer 
-                                    ? (previousAnswer.selected === index 
-                                        ? (previousAnswer.correct ? 'correct' : 'incorrect') 
-                                        : (index === question.correct ? 'correct' : '')) 
-                                    : (quizMode === 'quiz' && previousAnswer && previousAnswer.selected === index ? 'selected' : '')
-                            } ${previousAnswer ? 'disabled' : ''}" onclick="selectAnswer(${index})">
-                                <div class="option-letter">${String.fromCharCode(65 + index)}</div>
-                                <div class="option-text">${option}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div id="feedback" class="feedback ${showFeedback ? 'show' : ''} ${showFeedback ? (previousAnswer.correct ? 'correct' : 'incorrect') : ''}">
-                        ${showFeedback ? `
-                            <div class="feedback-header">
-                                <span class="feedback-icon">${previousAnswer.correct ? '✓' : '✗'}</span>
-                                <span>${previousAnswer.correct ? 'Correct!' : 'Incorrect'}</span>
-                            </div>
-                            <div class="feedback-content">
-                                ${question.explainer}
-                            </div>
-                            ${question.resourceLink ? `
-                                <div class="feedback-resource">
-                                    📚 Learn more: ${formatResourceLink(question.resourceLink, question.resourceName)}
-                                </div>
-                            ` : ''}
-                        ` : ''}
-                    </div>
-                    
-                    <div class="button-container">
-                        <button class="btn btn-back" id="back-btn" onclick="previousQuestion()" ${currentQuestion === 0 ? 'disabled' : ''}>
-                            ← Back
-                        </button>
-                        <button class="btn btn-next" id="next-btn" onclick="nextQuestion()" ${previousAnswer ? '' : 'disabled'}>
-                            ${currentQuestion === quizData.length - 1 ? 'View Results' : 'Next Question'}
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            answered = previousAnswer ? true : false;
-        }
-
-        function selectAnswer(selectedIndex) {
-            if (answered) return;
-            
-            const question = quizData[currentQuestion];
-            const options = document.querySelectorAll('.option');
-            const feedback = document.getElementById('feedback');
-            const nextBtn = document.getElementById('next-btn');
-            
-            answered = true;
-            const isCorrect = selectedIndex === question.correct;
-            
-            // Record answer
-            userAnswers[currentQuestion] = {
-                question: currentQuestion,
-                selected: selectedIndex,
-                correct: isCorrect
-            };
-            
-            if (isCorrect) {
-                score += question.points;
-            }
-            
-            // Disable all options
-            options.forEach(opt => opt.classList.add('disabled'));
-            
-            // STUDY MODE: Show immediate feedback
-            if (quizMode === 'study') {
-                // Mark selected answer
-                options[selectedIndex].classList.add(isCorrect ? 'correct' : 'incorrect');
-                
-                // Show correct answer if wrong
-                if (!isCorrect) {
-                    options[question.correct].classList.add('correct');
-                }
-                
-                // Show feedback
-                feedback.className = `feedback show ${isCorrect ? 'correct' : 'incorrect'}`;
-                feedback.innerHTML = `
-                    <div class="feedback-header">
-                        <span class="feedback-icon">${isCorrect ? '✓' : '✗'}</span>
-                        <span>${isCorrect ? 'Correct!' : 'Incorrect'}</span>
-                    </div>
-                    <div class="feedback-content">
-                        ${question.explainer}
-                    </div>
-                    ${question.resourceLink ? `
-                        <div class="feedback-resource">
-                            📚 Learn more: ${formatResourceLink(question.resourceLink, question.resourceName)}
-                        </div>
-                    ` : ''}
-                `;
-                
-                // Enable next button
-                nextBtn.disabled = false;
-            } 
-            // QUIZ MODE: Just mark as selected, no feedback, auto-advance
-            else {
-                options[selectedIndex].classList.add('selected');
-                
-                // Auto-advance to next question after brief delay
-                setTimeout(() => {
-                    nextQuestion();
-                }, 500);
-            }
-        }
-
-        function nextQuestion() {
-            currentQuestion++;
-            
-            if (currentQuestion < quizData.length) {
-                loadQuestion();
-            } else {
-                showResults();
-            }
-        }
-
-        function previousQuestion() {
-            if (currentQuestion > 0) {
-                currentQuestion--;
-                loadQuestion();
-            }
-        }
-
-        function showResults() {
-            const content = document.getElementById('quiz-content');
-            const totalPoints = quizData.reduce((sum, q) => sum + q.points, 0);
-            const percentage = Math.round((score / totalPoints) * 100);
-            const correctCount = userAnswers.filter(a => a && a.correct).length;
-            
-            // Update progress to 100%
-            document.getElementById('progress-fill').style.width = '100%';
-            document.getElementById('progress-text').textContent = 'Assessment Complete';
-            
-            let message = '';
-            if (percentage >= 90) {
-                message = 'Outstanding! 🎉';
-            } else if (percentage >= 80) {
-                message = 'Great job! 👏';
-            } else if (percentage >= 70) {
-                message = 'Good work! 👍';
-            } else {
-                message = 'Keep studying! 📚';
-            }
-            
-            // Build review section for quiz mode
-            let reviewHTML = '';
-            if (quizMode === 'quiz') {
-                reviewHTML = `
-                    <div class="quiz-review">
-                        <h3 style="margin-bottom: 20px; color: #2d3748;">Review Your Answers</h3>
-                        ${quizData.map((q, qIndex) => {
-                            const answer = userAnswers[qIndex];
-                            if (!answer) return '';
-                            
-                            const wasCorrect = answer.correct;
-                            const displayNum = qIndex + 1; // Sequential display number
-                            
-                            return `
-                                <div class="review-question ${wasCorrect ? 'correct' : 'incorrect'}">
-                                    <div class="review-header">
-                                        <span class="review-icon">${wasCorrect ? '✓' : '✗'}</span>
-                                        <span>Q${displayNum}: ${q.question}</span>
-                                    </div>
-                                    
-                                    <div class="review-options">
-                                        ${q.options.map((opt, optIndex) => {
-                                            let classes = 'review-option';
-                                            if (optIndex === answer.selected && !wasCorrect) {
-                                                classes += ' wrong-answer';
-                                            }
-                                            if (optIndex === q.correct) {
-                                                classes += ' correct-answer';
-                                            }
-                                            if (optIndex === answer.selected && wasCorrect) {
-                                                classes += ' user-answer correct-answer';
-                                            }
-                                            
-                                            return `
-                                                <div class="${classes}">
-                                                    <div style="margin-right: 12px; font-weight: 600;">${String.fromCharCode(65 + optIndex)}</div>
-                                                    <div>${opt}</div>
-                                                    ${optIndex === q.correct ? ' <span style="margin-left: auto; color: #48bb78;">✓ Correct</span>' : ''}
-                                                    ${optIndex === answer.selected && !wasCorrect ? ' <span style="margin-left: auto; color: #f56565;">Your Answer</span>' : ''}
-                                                </div>
-                                            `;
-                                        }).join('')}
-                                    </div>
-                                    
-                                    <div class="review-explainer">
-                                        ${q.explainer}
-                                        ${q.resourceLink ? `
-                                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
-                                                📚 Learn more: ${formatResourceLink(q.resourceLink, q.resourceName)}
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-            }
-            
-            content.innerHTML = `
-                <div class="results-container">
-                    <div class="results-score">${percentage}%</div>
-                    <div class="results-message">${message}</div>
-                    
-                    <div class="results-details">
-                        <div class="results-stat">
-                            <span class="results-stat-label">Questions Correct</span>
-                            <span class="results-stat-value">${correctCount} / ${quizData.length}</span>
-                        </div>
-                        <div class="results-stat">
-                            <span class="results-stat-label">Points Earned</span>
-                            <span class="results-stat-value">${score} / ${totalPoints}</span>
-                        </div>
-                        <div class="results-stat">
-                            <span class="results-stat-label">Percentage</span>
-                            <span class="results-stat-value">${percentage}%</span>
-                        </div>
-                    </div>
-                    
-                    ${reviewHTML}
-                    
-                    <button class="btn btn-restart" onclick="restartQuiz()">
-                        Take Quiz Again
-                    </button>
-                </div>
-            `;
-        }
-
-        function restartQuiz() {
-            currentQuestion = 0;
-            score = 0;
-            answered = false;
-            userAnswers = [];
-            quizMode = null;
-            
-            // Re-shuffle questions AND options
-            quizData = shuffleArray(quizData.map(q => {
-                const correctText = q.options[q.correct];
-                const shuffled = shuffleArray(q.options);
                 return {
                     ...q,
-                    options: shuffled,
-                    correct: shuffled.indexOf(correctText)
+                    options: shuffledOptions,
+                    correct: newCorrectIndex
                 };
-            }));
-            
-            showModeSelection();
+            });
         }
-
-        // Start loading quiz data from Google Sheet
-        loadQuizData();
+        
+        async function startMode(selectedMode) {
+            mode = selectedMode;
+            document.getElementById('modeSelection').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            
+            if (USE_TEST_DATA) {
+                // Use static test data
+                questions = prepareTestQuestions();
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('quizContent').classList.remove('hidden');
+                showQuestion();
+            } else {
+                // Load from Google Sheets
+                const loadedQuestions = await loadQuestionsFromSheet();
+                if (loadedQuestions && loadedQuestions.length > 0) {
+                    questions = loadedQuestions;
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('quizContent').classList.remove('hidden');
+                    showQuestion();
+                } else {
+                    document.getElementById('loading').innerHTML = '<p>Error loading questions. Please refresh and try again.</p>';
+                }
+            }
+        }
+        
+        function showQuestion() {
+            const q = questions[currentQuestionIndex];
+            const container = document.getElementById('questionContainer');
+            const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+            
+            // Update progress
+            document.getElementById('questionProgress').textContent = 
+                `Question ${currentQuestionIndex + 1} of ${questions.length}`;
+            
+            const earnedPoints = Object.entries(userAnswers).reduce((sum, [idx, answer]) => {
+                const qIdx = parseInt(idx);
+                if (answer === questions[qIdx].correct) {
+                    return sum + questions[qIdx].points;
+                }
+                return sum;
+            }, 0);
+            
+            document.getElementById('pointsDisplay').textContent = 
+                `Points: ${earnedPoints} / ${totalPoints}`;
+            
+            const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
+            document.getElementById('progressFill').style.width = progressPercent + '%';
+            
+            // Build question HTML
+            let html = `
+                <div class="question-text">
+                    <strong>Question ${q.number}</strong> (${q.points} point${q.points > 1 ? 's' : ''})
+                    ${userAnswers.hasOwnProperty(currentQuestionIndex) ? '<span class="answered-indicator">✓</span>' : ''}
+                    <br><br>${q.question}
+                </div>
+                <div class="options">
+            `;
+            
+            q.options.forEach((option, index) => {
+                const isSelected = userAnswers[currentQuestionIndex] === index;
+                const selectedClass = isSelected ? 'selected' : '';
+                
+                // In study mode, show correct/incorrect immediately
+                let feedbackClass = '';
+                if (mode === 'study' && userAnswers.hasOwnProperty(currentQuestionIndex)) {
+                    if (index === q.correct) {
+                        feedbackClass = 'correct';
+                    } else if (isSelected) {
+                        feedbackClass = 'incorrect';
+                    }
+                }
+                
+                html += `
+                    <div class="option ${selectedClass} ${feedbackClass}" onclick="selectAnswer(${index})">
+                        ${option}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Show feedback ONLY in study mode
+            if (mode === 'study' && userAnswers.hasOwnProperty(currentQuestionIndex)) {
+                const isCorrect = userAnswers[currentQuestionIndex] === q.correct;
+                html += `
+                    <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}">
+                        <div class="feedback-header">
+                            ${isCorrect ? '✓ Correct!' : '✗ Incorrect'}
+                        </div>
+                        <div>${q.explainer}</div>
+                        ${q.resourceLink ? `
+                            <div class="resource-link">
+                                📚 Learn more: <a href="${q.resourceLink}" target="_blank">${q.resourceName || 'Additional Resource'}</a>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+            updateNavigation();
+        }
+        
+        function selectAnswer(optionIndex) {
+            userAnswers[currentQuestionIndex] = optionIndex;
+            showQuestion();
+        }
+        
+        function updateNavigation() {
+            const backBtn = document.getElementById('backBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const reviewSection = document.getElementById('reviewSection');
+            
+            // Back button visibility
+            backBtn.style.display = currentQuestionIndex === 0 ? 'none' : 'block';
+            
+            const isLastQuestion = currentQuestionIndex === questions.length - 1;
+            const hasAnswer = userAnswers.hasOwnProperty(currentQuestionIndex);
+            
+            if (isLastQuestion && mode === 'quiz') {
+                // Quiz mode on last question: show review section
+                nextBtn.style.display = 'none';
+                updateReviewSection();
+            } else {
+                // Normal navigation
+                reviewSection.classList.add('hidden');
+                nextBtn.style.display = 'block';
+                
+                if (mode === 'quiz') {
+                    // Quiz mode: always enabled, changes text/color based on answer
+                    nextBtn.disabled = false;
+                    if (hasAnswer) {
+                        nextBtn.textContent = 'Next →';
+                        nextBtn.className = 'nav-btn btn-next';
+                    } else {
+                        nextBtn.textContent = 'Skip For Now →';
+                        nextBtn.className = 'nav-btn btn-skip';
+                    }
+                } else {
+                    // Study mode: disabled until answer selected
+                    nextBtn.textContent = 'Next →';
+                    nextBtn.className = 'nav-btn btn-next';
+                    nextBtn.disabled = !hasAnswer;
+                }
+            }
+        }
+        
+        function updateReviewSection() {
+            const reviewSection = document.getElementById('reviewSection');
+            const unansweredList = document.getElementById('unansweredList');
+            
+            // Find unanswered questions
+            const unanswered = [];
+            for (let i = 0; i < questions.length; i++) {
+                if (!userAnswers.hasOwnProperty(i)) {
+                    unanswered.push(i);
+                }
+            }
+            
+            if (unanswered.length === 0) {
+                // All answered - show submit button
+                reviewSection.innerHTML = `
+                    <h3 style="color: #4caf50;">✓ All Questions Answered!</h3>
+                    <p>You've answered all ${questions.length} questions. Ready to submit your quiz?</p>
+                    <button class="nav-btn btn-submit" onclick="submitQuiz()" style="margin-top: 20px; width: 100%; font-size: 18px; padding: 16px;">
+                        Submit Quiz
+                    </button>
+                `;
+            } else {
+                // Show unanswered questions
+                unansweredList.innerHTML = unanswered.map(idx => 
+                    `<div class="question-jump" onclick="jumpToQuestion(${idx})">
+                        Question ${questions[idx].number}
+                    </div>`
+                ).join('');
+            }
+            
+            reviewSection.classList.remove('hidden');
+        }
+        
+        function jumpToQuestion(index) {
+            currentQuestionIndex = index;
+            showQuestion();
+        }
+        
+        function nextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                showQuestion();
+            }
+        }
+        
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion();
+            }
+        }
+        
+        function submitQuiz() {
+            // Calculate score
+            let correctCount = 0;
+            let earnedPoints = 0;
+            const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+            
+            questions.forEach((q, index) => {
+                if (userAnswers[index] === q.correct) {
+                    correctCount++;
+                    earnedPoints += q.points;
+                }
+            });
+            
+            const percentage = Math.round((correctCount / questions.length) * 100);
+            
+            // Show results
+            document.getElementById('quizContent').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('scoreDisplay').textContent = percentage + '%';
+            document.getElementById('scoreText').textContent = 
+                `You answered ${correctCount} out of ${questions.length} questions correctly`;
+            document.getElementById('pointsText').textContent = 
+                `Total Points: ${earnedPoints} / ${totalPoints}`;
+            
+            // Encouragement message
+            let encouragement = '';
+            if (percentage >= 90) {
+                encouragement = 'Outstanding! You have excellent RCM knowledge. 🌟';
+            } else if (percentage >= 80) {
+                encouragement = 'Great job! You have a strong foundation in RCM. 👏';
+            } else if (percentage >= 70) {
+                encouragement = 'Good work! Review the areas you missed and try again. 📚';
+            } else {
+                encouragement = 'Keep learning! Review the RCM Deep Guide and retake the quiz. 💪';
+            }
+            document.getElementById('encouragement').textContent = encouragement;
+        }
+        
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            userAnswers = {};
+            
+            // Re-shuffle all questions
+            if (USE_TEST_DATA) {
+                questions = prepareTestQuestions();
+            } else {
+                questions.forEach(q => {
+                    const allOptions = [...q.options];
+                    const correctAnswer = allOptions[q.correct];
+                    q.options = shuffleArray(allOptions);
+                    q.correct = q.options.indexOf(correctAnswer);
+                });
+            }
+            
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('modeSelection').classList.remove('hidden');
+        }
+        
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('RCM Quiz loaded - Test mode:', USE_TEST_DATA);
+        });
     </script>
 </body>
 </html>
